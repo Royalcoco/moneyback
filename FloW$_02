@@ -1,0 +1,40 @@
+from flask import Flask, request, jsonify
+import hashlib
+import time
+
+app = Flask(__name__)
+
+# Example user data (in practice, use a secure database)
+users = {
+    "user1": {
+        "password_hash": hashlib.sha256("password123".encode()).hexdigest(),
+        "2fa_code": "123456",
+        "ping_time": 100  # Example ping time in ms
+    }
+}
+
+def verify_password(user, password):
+    return users[user]["password_hash"] == hashlib.sha256(password.encode()).hexdigest()
+
+def verify_2fa_code(user, code):
+    return users[user]["2fa_code"] == code
+
+def verify_ping_time(user, ping_time):
+    return abs(users[user]["ping_time"] - ping_time) < 10  # Allow 10ms deviation
+
+@app.route('/withdraw', methods=['POST'])
+def withdraw():
+    data = request.json
+    user = data["user"]
+    password = data["password"]
+    code = data["2fa_code"]
+    ping_time = data["ping_time"]
+
+    if verify_password(user, password) and verify_2fa_code(user, code) and verify_ping_time(user, ping_time):
+        # Process withdrawal
+        return jsonify({"status": "success", "message": "Withdrawal processed"})
+    else:
+        return jsonify({"status": "error", "message": "Authentication failed"}), 403
+
+if __name__ == '__main__':
+    app.run(port=5000)
