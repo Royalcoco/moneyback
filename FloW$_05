@@ -1,0 +1,24 @@
+from flask import Flask, request, jsonify
+import hashlib
+import time
+import random
+
+app = Flask(__name__)
+
+users = {
+    "user1": {
+        "password_hash": hashlib.sha256("password123".encode()).hexdigest(),
+        "2fa_secret": "secret123",
+        "ping_time": 100
+    }
+}
+
+def verify_password(user, password):
+    return users[user]["password_hash"] == hashlib.sha256(password.encode()).hexdigest()
+
+def generate_2fa_code(secret):
+    # Simplified example for generating a 2FA code
+    return hashlib.sha256((secret + str(int(time.time()) // 30)).encode()).hexdigest()[:6]
+
+def verify_2fa_code(user, code):
+    expected_code = generate_2fa_code(users[user]["2
