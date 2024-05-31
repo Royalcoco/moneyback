@@ -1,0 +1,5 @@
+# Initialize geth for a private Ethereum network
+geth --datadir ./my-blockchain init genesis.json
+
+# Start the blockchain
+geth --datadir ./my-blockchain --networkid 15 console
