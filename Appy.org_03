@@ -40,4 +40,31 @@ function App() {
     }
   };
 
-  const
+  const approveExchange = async () => {
+    if (contract) {
+      const tx = await contract.approveExchange(exchangeId);
+      await tx.wait();
+      alert('Exchange approved successfully');
+    }
+  };
+
+  return (
+    <div>
+      <h1>Secure Exchange</h1>
+      <div>
+        <h2>Initiate Exchange</h2>
+        <input type="text" placeholder="Counterparty Address" value={counterparty} onChange={e => setCounterparty(e.target.value)} />
+        <input type="text" placeholder="Token Address" value={token} onChange={e => setToken(e.target.value)} />
+        <input type="text" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
+        <button onClick={initiateExchange}>Initiate</button>
+      </div>
+      <div>
+        <h2>Approve Exchange</h2>
+        <input type="text" placeholder="Exchange ID" value={exchangeId} onChange={e => setExchangeId(e.target.value)} />
+        <button onClick={approveExchange}>Approve</button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
