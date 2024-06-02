@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VR Gallery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  </head>
+  <body>
+    <a-scene>
+      <a-assets>
+        <a-asset-item id="art-model" src="ipfs://YOUR_MODEL_IPFS_HASH"></a-asset-item>
+      </a-assets>
+      <a-entity gltf-model="#art-model" position="0 1.6 -3" scale="2 2 2"></a-entity>
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+</html>
