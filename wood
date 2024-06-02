@@ -1,0 +1,67 @@
+import React, { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import MoviePosterNFT from './artifacts/contracts/MoviePosterNFT.sol/MoviePosterNFT.json';
+import './App.css'; // Ajoutez vos styles personnalisés ici
+
+const contractAddress = 'YOUR_CONTRACT_ADDRESS';
+
+function App() {
+  const [nfts, setNfts] = useState([]);
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      if (window.ethereum) {
+        const prov = new ethers.providers.Web3Provider(window.ethereum);
+        const sign = prov.getSigner();
+        const cont = new ethers.Contract(contractAddress, MoviePosterNFT.abi, sign);
+
+        setProvider(prov);
+        setSigner(sign);
+        setContract(cont);
+      }
+    };
+    init();
+  }, []);
+
+  const fetchNFTs = async () => {
+    // Remplacez par la logique pour récupérer vos données NFT depuis votre backend ou directement depuis IPFS
+    const nftData = [];
+    setNfts(nftData);
+  };
+
+  const handleTransfer = async (tokenId, recipientAddress) => {
+    if (contract) {
+      const tx = await contract.transferNFT(signer.getAddress(), recipientAddress, tokenId);
+      await tx.wait();
+      fetchNFTs(); // Mettre à jour la liste des NFTs après le transfert
+    }
+  };
+
+  useEffect(() => {
+    if (contract) {
+      fetchNFTs();
+    }
+  }, [contract]);
+
+  return (
+    <div className="App">
+      <h1>Movie Poster NFTs</h1>
+      <div className="gallery">
+        {nfts.map((nft, index) => (
+          <div key={index} className="nft">
+            <img src={`ipfs://${nft.imageHash}`} alt={nft.title} />
+            <h2>{nft.title}</h2>
+            <p>Directed by: {nft.director}</p>
+            <p>Released in: {nft.year}</p>
+            <button onClick={() => handleTransfer(nft.tokenId, 'RECIPIENT_ADDRESS_HERE')}>Transfer NFT</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;
