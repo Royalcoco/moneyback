@@ -1,0 +1,74 @@
+import ipfshttpclient
+from web3 import Web3
+from solcx import compile_source
+from moviepy.editor import TextClip, CompositeVideoClip
+
+# Étape 1: Créer une base de données des tableaux
+tableaux = [
+    {"nom": "Mona Lisa", "artiste": "Leonardo da Vinci", "image": "mona_lisa.jpg"},
+    {"nom": "La Liberté guidant le peuple", "artiste": "Eugène Delacroix", "image": "liberte_guidant_le_peuple.jpg"},
+    # Ajouter plus de tableaux ici
+]
+
+# Étape 2: Créer les vidéos descriptives
+def create_video(description, output_path):
+    clip = TextClip(description, fontsize=70, color='white', size=(1920, 1080))
+    clip = clip.set_duration(5)
+    clip = CompositeVideoClip([clip])
+    clip.write_videofile(output_path, fps=24)
+
+for tableau in tableaux:
+    description = f"{tableau['artiste']} - {tableau['nom']}"
+    output_path = f"{tableau['nom'].replace(' ', '_')}.mp4"
+    create_video(description, output_path)
+
+# Étape 3: Téléchargez les vidéos sur IPFS
+client = ipfshttpclient.connect('/dns/localhost/tcp/5001/http')
+for tableau in tableaux:
+    video_path = f"{tableau['nom'].replace(' ', '_')}.mp4"
+    res = client.add(video_path)
+    tableau['ipfs_hash'] = res['Hash']
+
+# Étape 4: Créer le contrat intelligent en Solidity
+contract_source_code = '''
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract LouvreNFT is ERC721, Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
+
+    constructor() ERC721("LouvreNFT", "LNFT") {}
+
+    function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256) {
+        _tokenIdCounter.increment();
+        uint256 newItemId = _tokenIdCounter.current();
+        _mint(recipient, newItemId);
+        _setTokenURI(newItemId, tokenURI);
+        return newItemId;
+    }
+}
+'''
+
+compiled_sol = compile_source(contract_source_code)
+contract_interface = compiled_sol['<stdin>:LouvreNFT']
+
+w3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'))
+w3.eth.default_account = w3.eth.accounts[0]
+
+LouvreNFT = w3.eth.contract(abi=contract_interface['abi'], bytecode=contract_interface['bin'])
+tx_hash = LouvreNFT.constructor().transact()
+tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+contract_address = tx_receipt.contractAddress
+
+# Étape 5: Créez les NFT
+nft_contract = w3.eth.contract(address=contract_address, abi=contract_interface['abi'])
+for tableau in tableaux:
+    token_uri = f"ipfs://{tableau['ipfs_hash']}"
+    tx_hash = nft_contract.functions.mintNFT(w3.eth.default_account, token_uri).transact()
+    w3.eth.wait_for_transaction_receipt(tx_hash)
+    print(f"NFT created for {tableau['nom']}. Transaction hash: {tx_hash.hex()}")
+
