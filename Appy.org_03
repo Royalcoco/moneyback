@@ -1,0 +1,43 @@
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import SecureExchange from './artifacts/contracts/SecureExchange.sol/SecureExchange.json';
+
+const contractAddress = 'YOUR_CONTRACT_ADDRESS';
+
+function App() {
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+  const [exchangeId, setExchangeId] = useState('');
+  const [counterparty, setCounterparty] = useState('');
+  const [token, setToken] = useState('');
+  const [amount, setAmount] = useState('');
+  const [userAddress, setUserAddress] = useState('');
+
+  useEffect(() => {
+    const init = async () => {
+      if (window.ethereum) {
+        const prov = new ethers.providers.Web3Provider(window.ethereum);
+        const sign = prov.getSigner();
+        const cont = new ethers.Contract(contractAddress, SecureExchange.abi, sign);
+
+        setProvider(prov);
+        setSigner(sign);
+        setContract(cont);
+
+        const address = await sign.getAddress();
+        setUserAddress(address);
+      }
+    };
+    init();
+  }, []);
+
+  const initiateExchange = async () => {
+    if (contract) {
+      const tx = await contract.initiateExchange(counterparty, token, ethers.utils.parseUnits(amount, 18));
+      await tx.wait();
+      alert('Exchange initiated successfully');
+    }
+  };
+
+  const
