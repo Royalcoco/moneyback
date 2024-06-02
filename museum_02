@@ -1,0 +1,59 @@
+import React, { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import LouvreNFT from './artifacts/contracts/LouvreNFT.sol/LouvreNFT.json';
+
+const contractAddress = 'YOUR_CONTRACT_ADDRESS';
+
+function App() {
+  const [nfts, setNfts] = useState([]);
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const prov = new ethers.providers.Web3Provider(window.ethereum);
+      const sign = prov.getSigner();
+      const cont = new ethers.Contract(contractAddress, LouvreNFT.abi, sign);
+
+      setProvider(prov);
+      setSigner(sign);
+      setContract(cont);
+    };
+    init();
+  }, []);
+
+  const fetchNFTs = async () => {
+    const nftData = []; // Fetch your NFT data from your backend or directly from IPFS
+    setNfts(nftData);
+  };
+
+  useEffect(() => {
+    if (contract) {
+      fetchNFTs();
+    }
+  }, [contract]);
+
+  return (
+    <div>
+      <h1>Louvre NFTs</h1>
+      <div className="gallery">
+        {nfts.map((nft, index) => (
+          <div key={index} className="nft">
+            <a-scene embedded arjs>
+              <a-assets>
+                <a-asset-item id={`model-${index}`} src={`ipfs://${nft.model3DHash}`}></a-asset-item>
+              </a-assets>
+              <a-entity gltf-model={`#model-${index}`} position="0 1.6 -3" scale="2 2 2"></a-entity>
+              <a-sky color="#ECECEC"></a-sky>
+            </a-scene>
+            <h2>{nft.name}</h2>
+            <p>{nft.artist}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;
