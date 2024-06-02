@@ -1,0 +1,54 @@
+import React, { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import MoviePosterNFT from './artifacts/contracts/MoviePosterNFT.sol/MoviePosterNFT.json';
+
+const contractAddress = 'YOUR_CONTRACT_ADDRESS';
+
+function App() {
+  const [nfts, setNfts] = useState([]);
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const prov = new ethers.providers.Web3Provider(window.ethereum);
+      const sign = prov.getSigner();
+      const cont = new ethers.Contract(contractAddress, MoviePosterNFT.abi, sign);
+
+      setProvider(prov);
+      setSigner(sign);
+      setContract(cont);
+    };
+    init();
+  }, []);
+
+  const fetchNFTs = async () => {
+    const nftData = []; // Fetch your NFT data from your backend or directly from IPFS
+    setNfts(nftData);
+  };
+
+  useEffect(() => {
+    if (contract) {
+      fetchNFTs();
+    }
+  }, [contract]);
+
+  return (
+    <div>
+      <h1>Movie Poster NFTs</h1>
+      <div className="gallery">
+        {nfts.map((nft, index) => (
+          <div key={index} className="nft">
+            <img src={`ipfs://${nft.imageHash}`} alt={nft.title} />
+            <h2>{nft.title}</h2>
+            <p>{nft.director}</p>
+            <p>{nft.year}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;
