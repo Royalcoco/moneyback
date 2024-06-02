@@ -1,0 +1,30 @@
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
+contract MoviePosterNFT is ERC721URIStorage, Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
+
+    event NFTMinted(uint256 tokenId, address recipient, string tokenURI);
+    event NFTTransferred(uint256 tokenId, address from, address to);
+
+    constructor() ERC721("MoviePosterNFT", "MPNFT") {}
+
+    function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256) {
+        _tokenIdCounter.increment();
+        uint256 newItemId = _tokenIdCounter.current();
+        _mint(recipient, newItemId);
+        _setTokenURI(newItemId, tokenURI);
+        emit NFTMinted(newItemId, recipient, tokenURI);
+        return newItemId;
+    }
+
+    function transferNFT(address from, address to, uint256 tokenId) public {
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "Caller is not owner nor approved");
+        _transfer(from, to, tokenId);
+        emit NFTTransferred(tokenId, from, to);
+    }
+}
