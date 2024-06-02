@@ -1,0 +1,85 @@
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract SecureExchange is Ownable {
+    struct Exchange {
+        address initiator;
+        address counterparty;
+        address token;
+        uint256 amount;
+        bool approvedByInitiator;
+        bool approvedByCounterparty;
+        bool approvedByThirdParty;
+        bool fundsFrozen;
+    }
+
+    mapping(uint256 => Exchange) public exchanges;
+    uint256 public exchangeCounter;
+
+    event ExchangeInitiated(uint256 exchangeId, address initiator, address counterparty, address token, uint256 amount);
+    event ExchangeApproved(uint256 exchangeId, address approver);
+    event ExchangeCompleted(uint256 exchangeId);
+    event FundsFrozen(uint256 exchangeId);
+    event FundsUnfrozen(uint256 exchangeId);
+
+    modifier onlyParticipant(uint256 exchangeId) {
+        require(
+            msg.sender == exchanges[exchangeId].initiator || 
+            msg.sender == exchanges[exchangeId].counterparty || 
+            msg.sender == owner(),
+            "Not authorized"
+        );
+        _;
+    }
+
+    function initiateExchange(address counterparty, address token, uint256 amount) public {
+        exchanges[exchangeCounter] = Exchange({
+            initiator: msg.sender,
+            counterparty: counterparty,
+            token: token,
+            amount: amount,
+            approvedByInitiator: false,
+            approvedByCounterparty: false,
+            approvedByThirdParty: false,
+            fundsFrozen: false
+        });
+        
+        emit ExchangeInitiated(exchangeCounter, msg.sender, counterparty, token, amount);
+        exchangeCounter++;
+    }
+
+    function approveExchange(uint256 exchangeId) public onlyParticipant(exchangeId) {
+        if (msg.sender == exchanges[exchangeId].initiator) {
+            exchanges[exchangeId].approvedByInitiator = true;
+        } else if (msg.sender == exchanges[exchangeId].counterparty) {
+            exchanges[exchangeId].approvedByCounterparty = true;
+        } else if (msg.sender == owner()) {
+            exchanges[exchangeId].approvedByThirdParty = true;
+        }
+
+        emit ExchangeApproved(exchangeId, msg.sender);
+
+        if (exchanges[exchangeId].approvedByInitiator && exchanges[exchangeId].approvedByCounterparty && exchanges[exchangeId].approvedByThirdParty) {
+            _completeExchange(exchangeId);
+        }
+    }
+
+    function freezeFunds(uint256 exchangeId) public onlyOwner {
+        exchanges[exchangeId].fundsFrozen = true;
+        emit FundsFrozen(exchangeId);
+    }
+
+    function unfreezeFunds(uint256 exchangeId) public onlyOwner {
+        exchanges[exchangeId].fundsFrozen = false;
+        emit FundsUnfrozen(exchangeId);
+    }
+
+    function _completeExchange(uint256 exchangeId) internal {
+        require(!exchanges[exchangeId].fundsFrozen, "Funds are frozen");
+        Exchange memory ex = exchanges[exchangeId];
+        IERC20(ex.token).transferFrom(ex.initiator, ex.counterparty, ex.amount);
+        emit ExchangeCompleted(exchangeId);
+    }
+}
