@@ -1,0 +1,33 @@
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract SecureExchange is Ownable {
+    struct Exchange {
+        address initiator;
+        address counterparty;
+        address token;
+        uint256 amount;
+        bool approvedByInitiator;
+        bool approvedByCounterparty;
+        bool approvedByThirdParty;
+        bool fundsFrozen;
+        bool inDispute;
+    }
+
+    mapping(uint256 => Exchange) public exchanges;
+    uint256 public exchangeCounter;
+
+    event ExchangeInitiated(uint256 exchangeId, address initiator, address counterparty, address token, uint256 amount);
+    event ExchangeApproved(uint256 exchangeId, address approver);
+    event ExchangeCompleted(uint256 exchangeId);
+    event FundsFrozen(uint256 exchangeId);
+    event FundsUnfrozen(uint256 exchangeId);
+    event DisputeRaised(uint256 exchangeId);
+    event DisputeResolved(uint256 exchangeId, bool approved);
+
+    modifier onlyParticipant(uint256 exchangeId) {
+        require(
+            msg.sender == exchanges[exchangeId].initiator || 
+            msg.sender
