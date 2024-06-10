@@ -1,8 +1,35 @@
 import socket
 import os
+pip install openpyxl pyinstaller mysql-connector-python psycopg2-binary scikit-learn numpy
 
 CACHE_DIR = "/tmp/cache_memory"  # Cache memory directory
+import subprocess
+import openpyxl
+import os
 
+def read_configurations(file_path):
+    wb = openpyxl.load_workbook(file_path)
+    sheet = wb.active
+    
+    configurations = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        app, port, db_type = row
+        configurations.append((app, port, db_type))
+    
+    return configurations
+
+def start_applications(configurations):
+    if not os.path.exists("utilisateur_externe"):
+        os.makedirs("utilisateur_externe")
+
+    for app, port, db_type in configurations:
+        subprocess.Popen(["python", app, str(port), db_type])
+    print("Applications started.")
+
+if __name__ == "__main__":
+    config_file = "configurations.xlsx"
+    configurations = read_configurations(config_file)
+    start_applications(configurations)
 def start_signal_receiver(port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind(("0.0.0.0", port))
@@ -147,6 +174,97 @@ def main():
 
 if __name__ == "__main__":
     main()
+import socket
+import sys
+import os
+import sqlite3
+import mysql.connector
+import psycopg2
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+def write_to_output(data, db_type):
+    output_dir = "utilisateur_externe"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    output_file = os.path.join(output_dir, f"{db_type}_output.txt")
+    with open(output_file, "a") as f:
+        f.write(data + "\n")
+
+def start_server(port, db_type):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("127.0.0.1", port))  # Utiliser localhost pour rendre l'adresse LAN invisible
+    server_socket.listen(5)
+    print(f"Application listening on port {port} using {db_type}...")
+    
+    conn, cursor = None, None
+    
+    if db_type == "sqlite":
+        conn = sqlite3.connect('example.db')
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)''')
+        conn.commit()
+        write_to_output("SQLite: Created table 'test'", db_type)
+    elif db_type == "mysql":
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="yourusername",
+            password="yourpassword",
+            database="yourdatabase"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))''')
+        conn.commit()
+        write_to_output("MySQL: Created table 'test'", db_type)
+    elif db_type == "postgresql":
+        conn = psycopg2.connect(
+            dbname="yourdatabase",
+            user="yourusername",
+            password="yourpassword",
+            host="localhost"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id SERIAL PRIMARY KEY, name VARCHAR(255))''')
+        conn.commit()
+        write_to_output("PostgreSQL: Created table 'test'", db_type)
+    
+    conn.commit()
+
+    # Model for machine learning
+    model = LinearRegression()
+    training_data = np.array([[1, 2], [2, 3], [3, 4]])  # Example training data
+    target_data = np.array([2, 3, 4])  # Example target data
+    model.fit(training_data, target_data)
+
+    # Detect downloads and process data
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_socket.send(f"Welcome to Application using {db_type}".encode())
+
+        # Read data sent by the client
+        data = client_socket.recv(1024).decode()
+        
+        # Process the data using the machine learning model
+        data_features = np.array([len(data), len(data.split())]).reshape(1, -1)
+        prediction = model.predict(data_features)[0]
+        
+        # Multiply the result by 10 and write the output
+        processed_data_size = prediction * 10
+        output_message = f"{db_type}: Processed data size: {processed_data_size} bytes."
+        write_to_output(output_message, db_type)
+        
+        # Send the processed data back to the client (for illustration)
+        client_socket.send(f"Processed data size: {processed_data_size} bytes".encode())
+        
+        client_socket.close()
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    db_type = sys.argv[2]
+    start_server(port, db_type)
+
 
 import socket
 import sys
@@ -202,6 +320,91 @@ def start_server(port):
 if __name__ == "__main__":
     port = int(sys.argv[1])
     start_server(port)
+import socket
+import sys
+import os
+import sqlite3
+import mysql.connector
+import psycopg2
+
+def write_to_output(data, db_type):
+    output_dir = "utilisateur_externe"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    output_file = os.path.join(output_dir, f"{db_type}_output.txt")
+    with open(output_file, "a") as f:
+        f.write(data + "\n")
+
+def start_server(port, db_type):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("127.0.0.1", port))  # Utiliser localhost pour rendre l'adresse LAN invisible
+    server_socket.listen(5)
+    print(f"Application listening on port {port} using {db_type}...")
+    
+    conn, cursor = None, None
+    
+    if db_type == "sqlite":
+        conn = sqlite3.connect('example.db')
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)''')
+        conn.commit()
+        write_to_output("SQLite: Created table 'test'", db_type)
+    elif db_type == "mysql":
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="yourusername",
+            password="yourpassword",
+            database="yourdatabase"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))''')
+        conn.commit()
+        write_to_output("MySQL: Created table 'test'", db_type)
+    elif db_type == "postgresql":
+        conn = psycopg2.connect(
+            dbname="yourdatabase",
+            user="yourusername",
+            password="yourpassword",
+            host="localhost"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id SERIAL PRIMARY KEY, name VARCHAR(255))''')
+        conn.commit()
+        write_to_output("PostgreSQL: Created table 'test'", db_type)
+    
+    conn.commit()
+
+    # Detect downloads and process data
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_socket.send(f"Welcome to Application using {db_type}".encode())
+
+        # Read data sent by the client
+        data = client_socket.recv(1024).decode()
+        
+        # Process the data - In this example, we will just simulate it
+        processed_data = f"Processed data: {data}"
+        
+        # Detect the amount of data and multiply the result by 10
+        data_size = len(data)
+        processed_data_size = data_size * 10
+        
+        # Write the output
+        output_message = f"{db_type}: Detected {data_size} bytes, processed to {processed_data_size} bytes."
+        write_to_output(output_message, db_type)
+        
+        # Send the processed data back to the client (for illustration)
+        client_socket.send(f"Processed data size: {processed_data_size} bytes".encode())
+        
+        client_socket.close()
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    db_type = sys.argv[2]
+    start_server(port, db_type)
+
 import subprocess
 
 def start_applications():
@@ -291,3 +494,33 @@ if __name__ == "__main__":
     config_file = "configurations.xlsx"
     configurations = read_configurations(config_file)
     start_applications(configurations)
+import subprocess
+import openpyxl
+import os
+
+def read_configurations(file_path):
+    wb = openpyxl.load_workbook(file_path)
+    sheet = wb.active
+    
+    configurations = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        app, port, db_type = row
+        configurations.append((app, port, db_type))
+    
+    return configurations
+
+def start_applications(configurations):
+    if not os.path.exists("utilisateur_externe"):
+        os.makedirs("utilisateur_externe")
+
+    for app, port, db_type in configurations:
+        subprocess.Popen(["python", app, str(port), db_type])
+    print("Applications started.")
+
+if __name__ == "__main__":
+    config_file = "configurations.xlsx"
+    configurations = read_configurations(config_file)
+    start_applications(configurations)
+pyinstaller --onefile main.py
+pyinstaller --onefile app.py
+
