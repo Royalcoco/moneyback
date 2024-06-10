@@ -1,0 +1,215 @@
+import socket
+import os
+
+CACHE_DIR = "/tmp/cache_memory"  # Cache memory directory
+
+def start_signal_receiver(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(("0.0.0.0", port))
+    print(f"Listening for signals on port {port}...")
+    return server_socket
+
+def process_signal(data):
+    # Diviser les données par 10
+    processed_data = data[:len(data)//10]
+    return processed_data
+
+def copy_to_cache(data):
+    # Copier les données dans le cache mémoire
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    with open(os.path.join(CACHE_DIR, "source_code_cache.txt"), "wb") as f:
+        f.write(data)
+    print("Source code copied to cache memory.")
+
+def notify_routers(processed_data):
+    # Notifier les routeurs avec les données traitées
+    print("Notifying routers with processed data...")
+    router_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    router_address = ("192.168.1.1", 8080)  # Adresse et port fictifs
+    router_socket.sendto(processed_data, router_address)
+    print("Routers notified.")
+
+def main():
+    port = 5000  # Port pour écouter les signaux
+    server_socket = start_signal_receiver(port)
+    
+    while True:
+        data, addr = server_socket.recvfrom(1024)  # Taille du buffer
+        print(f"Received signal from {addr}: {data}")
+        
+        processed_data = process_signal(data)
+        print(f"Processed signal: {processed_data}")
+        
+        copy_to_cache(processed_data)
+        notify_routers(processed_data)
+
+if __name__ == "__main__":
+    main()
+
+pip install pyinstaller
+
+pyinstaller --onefile your_script.py
+
+CACHE_DIR = "cache_memory"  # Cache memory directory
+
+def start_signal_receiver(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(("0.0.0.0", port))
+    print(f"Listening for signals on port {port}...")
+    return server_socket
+
+def process_signal(data):
+    # Diviser les données en deux parties semi-circulaires
+    mid_index = len(data) // 2
+    part1 = data[:mid_index]
+    part2 = data[mid_index:]
+    return part1, part2
+
+def copy_to_cache(data, part_name):
+    # Copier les données dans le cache mémoire
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    with open(os.path.join(CACHE_DIR, f"{part_name}.txt"), "wb") as f:
+        f.write(data)
+    print(f"{part_name} copied to cache memory.")
+
+def notify_routers(part1, part2):
+    # Notifier les routeurs avec les données traitées
+    print("Notifying routers with processed data...")
+    router_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    router_address = ("192.168.1.1", 8080)  # Adresse et port fictifs
+    router_socket.sendto(part1, router_address)
+    router_socket.sendto(part2, router_address)
+    print("Routers notified.")
+
+def main():
+    port = 5000  # Port pour écouter les signaux
+    server_socket = start_signal_receiver(port)
+    
+    while True:
+        data, addr = server_socket.recvfrom(1024)  # Taille du buffer
+        print(f"Received signal from {addr}: {data}")
+        
+        part1, part2 = process_signal(data)
+        print(f"Processed signal into two parts: {part1}, {part2}")
+        
+        copy_to_cache(part1, "part1")
+        copy_to_cache(part2, "part2")
+        
+        notify_routers(part1, part2)
+
+if __name__ == "__main__":
+    main()
+
+# Étape 1: Configurer un service de réception de signal
+import socket
+
+def start_signal_receiver(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(("0.0.0.0", port))
+    print(f"Listening for signals on port {port}...")
+    return server_socket
+
+# Étape 2: Duplication du signal
+def duplicate_signal(data):
+    # Logique pour dupliquer le signal
+    duplicated_data = data + b" - DUPLICATED"
+    return duplicated_data
+
+# Étape 3: Fuite d'entrée pour notifier les routeurs
+def notify_routers(duplicated_data):
+    # Logique pour informer les routeurs
+    print("Notifying routers with duplicated data...")
+    # Exemple: envoyer les données à un routeur (adresse fictive)
+    router_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    router_address = ("192.168.1.1", 8080)  # Adresse et port fictifs
+    router_socket.sendto(duplicated_data, router_address)
+    print("Routers notified.")
+
+# Fonction principale pour démarrer le service
+def main():
+    port = 5000  # Port pour écouter les signaux
+    server_socket = start_signal_receiver(port)
+    
+    while True:
+        data, addr = server_socket.recvfrom(1024)  # Taille du buffer
+        print(f"Received signal from {addr}: {data}")
+        
+        duplicated_data = duplicate_signal(data)
+        print(f"Duplicated signal: {duplicated_data}")
+        
+        notify_routers(duplicated_data)
+
+if __name__ == "__main__":
+    main()
+
+import socket
+import sys
+import sqlite3
+
+def start_server(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(5)
+    print(f"Application 1 listening on port {port} using SQLite...")
+    
+    conn = sqlite3.connect('example.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)''')
+    conn.commit()
+    
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_socket.send(b"Welcome to Application 1 using SQLite")
+        client_socket.close()
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    start_server(port)
+
+import socket
+import sys
+import mysql.connector
+
+def start_server(port):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(5)
+    print(f"Application 2 listening on port {port} using MySQL...")
+    
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="yourusername",
+        password="yourpassword",
+        database="yourdatabase"
+    )
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))''')
+    conn.commit()
+    
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_socket.send(b"Welcome to Application 2 using MySQL")
+        client_socket.close()
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    start_server(port)
+import subprocess
+
+def start_applications():
+    apps = [
+        ("app1.py", 5001, "sqlite"),
+        ("app2.py", 5002, "mysql"),
+        ("app3.py", 5003, "postgresql")
+    ]
+    
+    for app, port, db_type in apps:
+        subprocess.Popen(["python", app, str(port), db_type])
+    print("Applications started.")
+
+if __name__ == "__main__":
+    start_applications()
