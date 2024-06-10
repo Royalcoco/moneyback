@@ -50,6 +50,10 @@ if __name__ == "__main__":
 pip install pyinstaller
 
 pyinstaller --onefile your_script.py
+pip install openpyxl pyinstaller
+
+pyinstaller --onefile main.py
+pyinstaller --onefile app.py
 
 CACHE_DIR = "cache_memory"  # Cache memory directory
 
@@ -213,3 +217,77 @@ def start_applications():
 
 if __name__ == "__main__":
     start_applications()
+
+import socket
+import sys
+import sqlite3
+import mysql.connector
+import psycopg2
+
+def start_server(port, db_type):
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("127.0.0.1", port))  # Utiliser localhost pour rendre l'adresse LAN invisible
+    server_socket.listen(5)
+    print(f"Application listening on port {port} using {db_type}...")
+    
+    conn, cursor = None, None
+    
+    if db_type == "sqlite":
+        conn = sqlite3.connect('example.db')
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)''')
+    elif db_type == "mysql":
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="yourusername",
+            password="yourpassword",
+            database="yourdatabase"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))''')
+    elif db_type == "postgresql":
+        conn = psycopg2.connect(
+            dbname="yourdatabase",
+            user="yourusername",
+            password="yourpassword",
+            host="localhost"
+        )
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS test (id SERIAL PRIMARY KEY, name VARCHAR(255))''')
+    
+    conn.commit()
+    
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        client_socket.send(f"Welcome to Application using {db_type}".encode())
+        client_socket.close()
+
+if __name__ == "__main__":
+    port = int(sys.argv[1])
+    db_type = sys.argv[2]
+    start_server(port, db_type)
+
+import subprocess
+import openpyxl
+
+def read_configurations(file_path):
+    wb = openpyxl.load_workbook(file_path)
+    sheet = wb.active
+    
+    configurations = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        app, port, db_type = row
+        configurations.append((app, port, db_type))
+    
+    return configurations
+
+def start_applications(configurations):
+    for app, port, db_type in configurations:
+        subprocess.Popen(["python", app, str(port), db_type])
+    print("Applications started.")
+
+if __name__ == "__main__":
+    config_file = "configurations.xlsx"
+    configurations = read_configurations(config_file)
+    start_applications(configurations)
