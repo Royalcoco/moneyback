@@ -1,0 +1,21 @@
+# Installer Node.js et npm
+sudo apt-get update
+sudo apt-get install nodejs
+sudo apt-get install npm
+
+# Installer Truffle
+npm install -g truffle
+
+# Installer Ganache
+npm install -g ganache-cli
+mkdir simplocash
+cd simplocash
+truffle init
+# Lancer Ganache pour le développement local
+ganache-cli
+
+# Déployer sur le réseau de développement local
+truffle migrate --network development
+
+# Déployer sur le réseau Rinkeby
+truffle migrate --network rinkeby
