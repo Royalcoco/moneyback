@@ -1,0 +1,8 @@
+pip install flask flask_sqlalchemy flask_socketio werkzeug cryptography
+python app.py
+
+from app import db, app
+from app import User, Message
+
+with app.app_context():
+    db.create_all()
