@@ -55,3 +55,109 @@ module.exports = {
     }
   }
 };
+const Simplocash = artifacts.require("Simplocash");
+
+contract("Simplocash", accounts => {
+    const [initialHolder, recipient, anotherAccount] = accounts;
+
+    it("should have the correct initial supply", async () => {
+        const instance = await Simplocash.deployed();
+        const totalSupply = await instance.totalSupply();
+        assert.equal(totalSupply.toString(), (1000000 * 10**18).toString(), "The initial supply is not correct");
+    });
+
+    it("should assign the initial supply to the creator", async () => {
+        const instance = await Simplocash.deployed();
+        const balance = await instance.balanceOf(initialHolder);
+        assert.equal(balance.toString(), (1000000 * 10**18).toString(), "The initial balance is not assigned to the creator");
+    });
+
+    it("should transfer tokens correctly", async () => {
+        const instance = await Simplocash.deployed();
+        await instance.transfer(recipient, 1000, { from: initialHolder });
+
+        const balance = await instance.balanceOf(recipient);
+        assert.equal(balance.toString(), '1000', "The recipient balance is not correct after transfer");
+    });
+
+    it("should fail when trying to transfer more tokens than available", async () => {
+        const instance = await Simplocash.deployed();
+        try {
+            await instance.transfer(recipient, 2000000 * 10**18, { from: initialHolder });
+        } catch (error) {
+            assert(error.message.includes("revert"), "Expected an error but did not get one");
+            return;
+        }
+        assert(false, "Expected error not received");
+    });
+
+    it("should mint tokens correctly", async () => {
+        const instance = await Simplocash.deployed();
+        const initialTotalSupply = await instance.totalSupply();
+        await instance.mint(initialHolder, 1000);
+        const newTotalSupply = await instance.totalSupply();
+        assert.equal(newTotalSupply.toString(), (parseInt(initialTotalSupply) + 1000).toString(), "Total supply is not correct after minting");
+
+        const balance = await instance.balanceOf(initialHolder);
+        assert.equal(balance.toString(), (parseInt(initialTotalSupply) + 1000).toString(), "Balance is not correct after minting");
+    });
+
+    it("should burn tokens correctly", async () => {
+        const instance = await Simplocash.deployed();
+        const initialTotalSupply = await instance.totalSupply();
+        await instance.burn(1000, { from: initialHolder });
+        const newTotalSupply = await instance.totalSupply();
+        assert.equal(newTotalSupply.toString(), (parseInt(initialTotalSupply) - 1000).toString(), "Total supply is not correct after burning");
+
+        const balance = await instance.balanceOf(initialHolder);
+        assert.equal(balance.toString(), (parseInt(initialTotalSupply) - 1000).toString(), "Balance is not correct after burning");
+    });
+});
+const Web3 = require('web3');
+const Simplocash = require('./build/contracts/Simplocash.json');
+
+const init = async () => {
+    const web3 = new Web3('http://127.0.0.1:8545'); // Pour le développement local
+    const id = await web3.eth.net.getId();
+    const deployedNetwork = Simplocash.networks[id];
+    const contract = new web3.eth.Contract(
+        Simplocash.abi,
+        deployedNetwork && deployedNetwork.address,
+    );
+
+    const accounts = await web3.eth.getAccounts();
+    console.log('Accounts:', accounts);
+
+    const name = await contract.methods.name().call();
+    console.log('Token Name:', name);
+
+    const symbol = await contract.methods.symbol().call();
+    console.log('Token Symbol:', symbol);
+
+    const totalSupply = await contract.methods.totalSupply().call();
+    console.log('Total Supply:', totalSupply);
+
+    const balance = await contract.methods.balanceOf(accounts[0]).call();
+    console.log('Balance of account 0:', balance);
+
+    // Transfer tokens
+    await contract.methods.transfer(accounts[1], 1000).send({ from: accounts[0] });
+    const balanceAfterTransfer = await contract.methods.balanceOf(accounts[1]).call();
+    console.log('Balance of account 1 after transfer:', balanceAfterTransfer);
+
+    // Mint tokens
+    await contract.methods.mint(accounts[0], 500).send({ from: accounts[0] });
+    const newTotalSupply = await contract.methods.totalSupply().call();
+    console.log('Total Supply after minting:', newTotalSupply);
+    const balanceAfterMinting = await contract.methods.balanceOf(accounts[0]).call();
+    console.log('Balance of account 0 after minting:', balanceAfterMinting);
+
+    // Burn tokens
+    await contract.methods.burn(500).send({ from: accounts[0] });
+    const finalTotalSupply = await contract.methods.totalSupply().call();
+    console.log('Total Supply after burning:', finalTotalSupply);
+    const balanceAfterBurning = await contract.methods.balanceOf(accounts[0]).call();
+    console.log('Balance of account 0 after burning:', balanceAfterBurning);
+};
+
+init();
