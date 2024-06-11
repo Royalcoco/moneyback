@@ -1,0 +1,109 @@
+python base64_password_tool.py encode "mon_mot_de_passe"
+python base64_password_tool.py decode "bW9uX21vdF9kZV9wYXNzZQ=="
+python base64_password_tool.py find "bW9uX21vdF9kZV9wYXNzZQ==" --wordlist wordlist.txt
+
+  import unittest
+from base64_password_tool import encode_password, decode_password, find_password
+
+class TestBase64PasswordTool(unittest.TestCase):
+
+    def test_encode_password(self):
+        password = "mon_mot_de_passe"
+        expected = "bW9uX21vdF9kZV9wYXNzZQ=="
+        self.assertEqual(encode_password(password), expected)
+
+    def test_decode_password(self):
+        base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        expected = "mon_mot_de_passe"
+        self.assertEqual(decode_password(base64_password), expected)
+
+    def test_find_password(self):
+        base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        wordlist = ["password1", "password2", "mon_mot_de_passe", "password3"]
+        self.assertEqual(find_password(base64_password, wordlist), "mon_mot_de_passe")
+
+    def test_find_password_not_in_list(self):
+        base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        wordlist = ["password1", "password2", "password3"]
+        self.assertIsNone(find_password(base64_password, wordlist))
+
+if __name__ == '__main__':
+    unittest.main()
+
+  import socket
+import threading
+from base64_password_tool import find_password
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("localhost", 9999))
+    server_socket.listen(5)
+    print("Server listening on port 9999...")
+    
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        data = client_socket.recv(1024).decode()
+        print(f"Received data: {data}")
+        response = process_request(data)
+        client_socket.send(response.encode())
+        client_socket.close()
+
+def process_request(data):
+    base64_password, wordlist_path = data.split(';')
+    try:
+        with open(wordlist_path, 'r') as f:
+            wordlist = f.read().splitlines()
+    except FileNotFoundError:
+        return "Wordlist file not found"
+    
+    found_password = find_password(base64_password, wordlist)
+    return found_password if found_password else "Password not found"
+
+def send_request(base64_password, wordlist_path):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect(("localhost", 9999))
+    client_socket.send(f"{base64_password};{wordlist_path}".encode())
+    response = client_socket.recv(1024).decode()
+    client_socket.close()
+    return response
+
+if __name__ == '__main__':
+    # Start the server in a separate thread
+    server_thread = threading.Thread(target=start_server, daemon=True)
+    server_thread.start()
+
+    # Example request
+    base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+    wordlist_path = "wordlist.txt"
+    response = send_request(base64_password, wordlist_path)
+    print(f"Response from server: {response}")
+
+  import unittest
+import threading
+from signal_router import start_server, send_request
+
+class TestPasswordCrackingWithSignalRouter(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Start the signal router server
+        cls.server_thread = threading.Thread(target=start_server, daemon=True)
+        cls.server_thread.start()
+
+    def test_crack_password(self):
+        base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        with open("test_wordlist.txt", "w") as f:
+            f.write("\n".join(["password1", "password2", "mon_mot_de_passe", "password3"]))
+        response = send_request(base64_password, "test_wordlist.txt")
+        self.assertEqual(response, "mon_mot_de_passe")
+
+    def test_password_not_found(self):
+        base64_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        with open("test_wordlist.txt", "w") as f:
+            f.write("\n".join(["password1", "password2", "password3"]))
+        response = send_request(base64_password, "test_wordlist.txt")
+        self.assertEqual(response, "Password not found")
+
+if __name__ == '__main__':
+    unittest.main()
