@@ -1,0 +1,79 @@
+# app.py
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO, send
+from werkzeug.security import generate_password_hash, check_password_hash
+from cryptography.fernet import Fernet
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat_app.db'
+app.config['SECRET_KEY'] = 'secret!'
+db = SQLAlchemy(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Generate a new key for encryption
+key = Fernet.generate_key()
+cipher_suite = Fernet(key)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=db.func.now())
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+    new_user = User(username=data['username'], email=data['email'], password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'User registered successfully'})
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+    if not user or not check_password_hash(user.password, data['password']):
+        return jsonify({'message': 'Login failed'})
+    return jsonify({'message': 'Login successful', 'user_id': user.id})
+
+@socketio.on('message')
+def handle_message(data):
+    print('received message: ' + data)
+    send(data, broadcast=True)
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    sender_id = data['sender_id']
+    receiver_id = data['receiver_id']
+    message_content = data['message']
+
+    # Encrypt the message
+    encrypted_message = cipher_suite.encrypt(message_content.encode())
+
+    new_message = Message(sender_id=sender_id, receiver_id=receiver_id, content=encrypted_message.decode())
+    db.session.add(new_message)
+    db.session.commit()
+
+    # Simulate sending the message to WhatsApp API
+    send_to_whatsapp(new_message)
+
+    # Send message to receiver
+    send(data, broadcast=True)
+
+def send_to_whatsapp(message):
+    # Simulate sending message to WhatsApp (this is a placeholder for the actual integration)
+    print(f"Sending message to WhatsApp: {message.content}")
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    socketio.run(app, debug=True)
