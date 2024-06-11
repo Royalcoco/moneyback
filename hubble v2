@@ -1,0 +1,60 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants
+h = 6.626e-34  # Planck constant, J·s
+c = 3e8        # Speed of light, m/s
+k = 1.38e-23   # Boltzmann constant, J/K
+T = 1e6        # Temperature, K
+
+# Parameters for the fractal and magnetic field
+lambda_uv = 100e-9  # Wavelength in meters
+B_0 = 1e12          # Magnetic field strength in Tesla
+omega = 1e9         # Angular frequency in rad/s
+phi = 0             # Phase angle
+
+# Duality and observation (Double Slit)
+def interference_pattern(x, d, L, lambda_):
+    return np.cos(2 * np.pi * d * x / (lambda_ * L))
+
+# Planck's law for black body radiation
+def planck_law(lambda_, T):
+    return (2 * h * c**2) / (lambda_**5 * (np.exp(h * c / (lambda_ * k * T)) - 1))
+
+# Fractal transformation (extended Mandelbrot set)
+def fractal_transform(z, c):
+    return z**2 + c
+
+# Initial grid for fractal
+x = np.linspace(-2, 2, 400)
+y = np.linspace(-2, 2, 400)
+X, Y = np.meshgrid(x, y)
+Z = X + 1j * Y
+
+# Apply fractal transformation
+c = 0.355 + 0.355j
+iterations = 50
+for i in range(iterations):
+    Z = fractal_transform(Z, c)
+
+# Calculate the magnitude of the fractal result
+fractal_magnitude = np.abs(Z)
+
+# Apply magnetic influence
+B_t = B_0 * np.sin(omega * np.linspace(0, 2 * np.pi, len(x)) + phi)
+magnetic_influence = np.cos(fractal_magnitude + B_t[:, np.newaxis])
+
+# Calculate the spectral intensity
+spectral_intensity = planck_law(lambda_uv, T)
+
+# Combine results into a power curve
+power_curve = interference_pattern(X, 0.1, 1, lambda_uv) * magnetic_influence * spectral_intensity
+
+# Plot the power curve
+plt.figure(figsize=(10, 6))
+plt.imshow(power_curve, extent=[-2, 2, -2, 2], cmap='inferno')
+plt.colorbar(label='Power Intensity')
+plt.title('Power Curve Integrating Fractal, Magnetic Influence, and Spectral Intensity')
+plt.xlabel('X-axis')
+plt.ylabel('Y-axis')
+plt.show()
