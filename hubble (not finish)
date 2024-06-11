@@ -1,0 +1,24 @@
+import hashlib
+import random
+import numpy as np
+
+# Constants
+G = 6.674e-11  # Gravitational constant
+c = 3e8        # Speed of light
+h = 6.626e-34  # Planck constant
+
+# Blockchain parameters
+block_size = 1024
+initial_difficulty = 4
+
+class Block:
+    def __init__(self, index, previous_hash, data, timestamp, nonce=0):
+        self.index = index
+        self.previous_hash = previous_hash
+        self.data = data
+        self.timestamp = timestamp
+        self.nonce = nonce
+        self.hash = self.calculate_hash()
+    
+    def calculate_hash(self):
+        value = str(self.index) + str(self.previous
