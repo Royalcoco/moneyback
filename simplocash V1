@@ -19,3 +19,5 @@ truffle migrate --network development
 
 # Déployer sur le réseau Rinkeby
 truffle migrate --network rinkeby
+truffle test
+node interact.js
