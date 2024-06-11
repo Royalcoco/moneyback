@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Simplocash is ERC20, Ownable {
+    constructor(uint256 initialSupply) ERC20("Simplocash", "SIMP") {
+        _mint(msg.sender, initialSupply);
+    }
+}
+// Simplocash.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Simplocash is ERC20, Ownable {
+    constructor(uint256 initialSupply) ERC20("Simplocash", "SIMP") {
+        _mint(msg.sender, initialSupply);
+    }
+}
