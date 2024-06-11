@@ -1,0 +1,91 @@
+# router_server.py
+import socket
+import threading
+import base64
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("localhost", 9999))
+    server_socket.listen(5)
+    print("Server listening on port 9999...")
+    
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+        data = client_socket.recv(1024).decode()
+        print(f"Received data: {data}")
+        response = process_request(data)
+        client_socket.send(response.encode())
+        client_socket.close()
+
+def process_request(data):
+    try:
+        incomplete_code, encoded_password = data.split(';')
+        decoded_password = decode_incomplete_base64(encoded_password, incomplete_code)
+        return decoded_password if decoded_password else "Decryption failed"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def decode_incomplete_base64(encoded_password, incomplete_code):
+    # Simulate the completion of the incomplete code (here we just return the incomplete code for simplicity)
+    complete_code = incomplete_code + "=="
+    try:
+        decoded_bytes = base64.b64decode(complete_code.encode())
+        password = decoded_bytes.decode('utf-8')
+        return password
+    except Exception as e:
+        return None
+
+if __name__ == '__main__':
+    server_thread = threading.Thread(target=start_server, daemon=True)
+    server_thread.start()
+    server_thread.join()
+# client.py
+import socket
+
+def send_request(incomplete_code, encoded_password):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect(("localhost", 9999))
+    request = f"{incomplete_code};{encoded_password}"
+    client_socket.send(request.encode())
+    response = client_socket.recv(1024).decode()
+    client_socket.close()
+    return response
+
+if __name__ == '__main__':
+    incomplete_code = "bW9uX21vdF9kZV9wYXNz"
+    encoded_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+    response = send_request(incomplete_code, encoded_password)
+    print(f"Response from server: {response}")
+# test_decryption.py
+import unittest
+import threading
+from router_server import start_server
+from client import send_request
+
+class TestDecryption(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Start the server in a separate thread
+        cls.server_thread = threading.Thread(target=start_server, daemon=True)
+        cls.server_thread.start()
+
+    def test_decrypt_password(self):
+        incomplete_code = "bW9uX21vdF9kZV9wYXNz"
+        encoded_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        response = send_request(incomplete_code, encoded_password)
+        self.assertEqual(response, "mon_mot_de_passe")
+
+    def test_decryption_failed(self):
+        incomplete_code = "invalid_code"
+        encoded_password = "bW9uX21vdF9kZV9wYXNzZQ=="
+        response = send_request(incomplete_code, encoded_password)
+        self.assertEqual(response, "Decryption failed")
+
+if __name__ == '__main__':
+    unittest.main()
+pip install unittest
+python router_server.py
+python client.py
+python test_decryption.py
