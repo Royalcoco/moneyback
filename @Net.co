@@ -1,0 +1,63 @@
+import base64
+import argparse
+
+def encode_password(password):
+    """
+    Encode a password using Base64.
+    """
+    password_bytes = password.encode('utf-8')
+    base64_bytes = base64.b64encode(password_bytes)
+    base64_password = base64_bytes.decode('utf-8')
+    return base64_password
+
+def decode_password(base64_password):
+    """
+    Decode a Base64 encoded password.
+    """
+    base64_bytes = base64_password.encode('utf-8')
+    password_bytes = base64.b64decode(base64_bytes)
+    password = password_bytes.decode('utf-8')
+    return password
+
+def find_password(base64_password, wordlist):
+    """
+    Find the original password from a Base64 encoded string using a wordlist.
+    """
+    for password in wordlist:
+        encoded = encode_password(password.strip())
+        if encoded == base64_password:
+            return password.strip()
+    return None
+
+def main():
+    parser = argparse.ArgumentParser(description='Base64 Password Tool')
+    parser.add_argument('action', choices=['encode', 'decode', 'find'], help='Action to perform')
+    parser.add_argument('password', help='Password to encode/decode or Base64 string to find')
+    parser.add_argument('--wordlist', help='Path to wordlist for finding passwords')
+
+    args = parser.parse_args()
+
+    if args.action == 'encode':
+        print(encode_password(args.password))
+    elif args.action == 'decode':
+        print(decode_password(args.password))
+    elif args.action == 'find':
+        if not args.wordlist:
+            print("Wordlist file is required for finding passwords")
+            return
+
+        try:
+            with open(args.wordlist, 'r') as f:
+                wordlist = f.readlines()
+        except FileNotFoundError:
+            print(f"Wordlist file {args.wordlist} not found")
+            return
+
+        found_password = find_password(args.password, wordlist)
+        if found_password:
+            print(f"Password found: {found_password}")
+        else:
+            print("Password not found in wordlist")
+
+if __name__ == '__main__':
+    main()
