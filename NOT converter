@@ -1,0 +1,69 @@
+# app.py
+
+from flask import Flask, request, jsonify
+import requests
+from web3 import Web3
+
+app = Flask(__name__)
+
+# Configuration pour les API NOT, Exchange, et Bank
+NOT_NODE_URL = 'https://api.not.io'
+EXCHANGE_API_URL = 'https://api.exchange.com'
+EXCHANGE_API_KEY = 'your_exchange_api_key'
+BANK_API_URL = 'https://api.bank.com'
+BANK_API_KEY = 'your_bank_api_key'
+WEB3_PROVIDER = Web3.HTTPProvider(NOT_NODE_URL)
+
+# Initialiser web3
+web3 = Web3(WEB3_PROVIDER)
+
+@app.route('/withdraw', methods=['POST'])
+def withdraw():
+    data = request.json
+    not_address = data['not_address']
+    amount_not = data['amount_not']
+    bank_account = data['bank_account']
+    
+    # 1. Vérifier le solde NOT
+    balance = get_not_balance(not_address)
+    if balance < amount_not:
+        return jsonify({'error': 'Solde NOT insuffisant'}), 400
+    
+    # 2. Convertir NOT en devise fiduciaire
+    amount_fiat = convert_not_to_fiat(amount_not)
+    
+    # 3. Transférer la devise fiduciaire sur le compte bancaire
+    success = transfer_to_bank(bank_account, amount_fiat)
+    if not success:
+        return jsonify({'error': 'Échec du transfert bancaire'}), 500
+    
+    return jsonify({'message': 'Retrait réussi', 'amount_fiat': amount_fiat})
+
+def get_not_balance(not_address):
+    # Exemple: Récupérer le solde depuis l'API NOT
+    response = requests.get(f'{NOT_NODE_URL}/getBalance/{not_address}')
+    balance = response.json().get('balance', 0)
+    return float(balance)
+
+def convert_not_to_fiat(amount_not):
+    # Exemple: Convertir NOT en devise fiduciaire via l'API de l'échange
+    response = requests.get(f'{EXCHANGE_API_URL}/convert', params={
+        'from': 'NOT',
+        'to': 'USD',
+        'amount': amount_not,
+        'api_key': EXCHANGE_API_KEY
+    })
+    amount_fiat = response.json().get('amount_fiat', 0)
+    return float(amount_fiat)
+
+def transfer_to_bank(bank_account, amount_fiat):
+    # Exemple: Transférer la devise fiduciaire sur le compte bancaire via l'API bancaire
+    response = requests.post(f'{BANK_API_URL}/transfer', json={
+        'bank_account': bank_account,
+        'amount': amount_fiat,
+        'api_key': BANK_API_KEY
+    })
+    return response.status_code == 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
