@@ -1,0 +1,69 @@
+# app.py
+
+from flask import Flask, request, jsonify
+import requests
+from web3 import Web3
+
+app = Flask(__name__)
+
+# Configuration for IOST, Exchange, and Bank APIs
+IOST_NODE_URL = 'https://api.iost.io'
+EXCHANGE_API_URL = 'https://api.exchange.com'
+EXCHANGE_API_KEY = 'your_exchange_api_key'
+BANK_API_URL = 'https://api.bank.com'
+BANK_API_KEY = 'your_bank_api_key'
+WEB3_PROVIDER = Web3.HTTPProvider(IOST_NODE_URL)
+
+# Initialize web3
+web3 = Web3(WEB3_PROVIDER)
+
+@app.route('/withdraw', methods=['POST'])
+def withdraw():
+    data = request.json
+    iost_address = data['iost_address']
+    amount_iost = data['amount_iost']
+    bank_account = data['bank_account']
+    
+    # 1. Check IOST balance
+    balance = get_iost_balance(iost_address)
+    if balance < amount_iost:
+        return jsonify({'error': 'Insufficient IOST balance'}), 400
+    
+    # 2. Convert IOST to fiat
+    amount_fiat = convert_iost_to_fiat(amount_iost)
+    
+    # 3. Transfer fiat to bank account
+    success = transfer_to_bank(bank_account, amount_fiat)
+    if not success:
+        return jsonify({'error': 'Bank transfer failed'}), 500
+    
+    return jsonify({'message': 'Withdrawal successful', 'amount_fiat': amount_fiat})
+
+def get_iost_balance(iost_address):
+    # Example: Retrieve balance from IOST API
+    response = requests.get(f'{IOST_NODE_URL}/getBalance/{iost_address}')
+    balance = response.json().get('balance', 0)
+    return float(balance)
+
+def convert_iost_to_fiat(amount_iost):
+    # Example: Convert IOST to fiat using exchange API
+    response = requests.get(f'{EXCHANGE_API_URL}/convert', params={
+        'from': 'IOST',
+        'to': 'USD',
+        'amount': amount_iost,
+        'api_key': EXCHANGE_API_KEY
+    })
+    amount_fiat = response.json().get('amount_fiat', 0)
+    return float(amount_fiat)
+
+def transfer_to_bank(bank_account, amount_fiat):
+    # Example: Transfer fiat to bank using bank API
+    response = requests.post(f'{BANK_API_URL}/transfer', json={
+        'bank_account': bank_account,
+        'amount': amount_fiat,
+        'api_key': BANK_API_KEY
+    })
+    return response.status_code == 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
