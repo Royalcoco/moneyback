@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EvoCoin {
+    string public name = "EvoCoin";
+    string public symbol = "EVO";
+    uint8 public decimals = 18;
+    uint256 public totalSupply = 1000000 * (10 ** uint256(decimals));
+    uint256 public exchangeCount = 0;
+    uint256 public constant EXCHANGE_LIMIT = 100;
+    uint256 public stakingPool = 0;
+
+    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) public stakedBalance;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Staked(address indexed from, uint256 value);
+    event Unstaked(address indexed from, uint256 value);
+    event Evaporated(address indexed from, uint256 value);
+    event TotalEvaporation();
+
+    constructor() {
+        balanceOf[msg.sender] = totalSupply;
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        require(balanceOf[msg.sender] >= _value, "Insufficient balance");
+        balanceOf[msg.sender] -= _value;
+        balanceOf[_to] += _value;
+        emit Transfer(msg.sender, _to, _value);
+        incrementExchangeCount();
+        return true;
+    }
+
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        allowance[msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        require(_value <= balanceOf[_from], "Insufficient balance");
+        require(_value <= allowance[_from][msg.sender], "Allowance exceeded");
+        balanceOf[_from] -= _value;
+        balanceOf[_to] += _value;
+        allowance[_from][msg.sender] -= _value;
+        emit Transfer(_from, _to, _value);
+        incrementExchangeCount();
+        return true;
+    }
+
+    function incrementExchangeCount() internal {
+        exchangeCount += 1;
+        if (exchangeCount >= EXCHANGE_LIMIT) {
+            convertAllToFiat();
+            evaporateAll();
+            reset();
+        }
+    }
+
+    function stake(uint256 _value) public returns (bool success) {
+        require(balanceOf[msg.sender] >= _value, "Insufficient balance");
+        balanceOf[msg.sender] -= _value;
+        stakedBalance[msg.sender] += _value;
+        stakingPool += _value;
+        emit Staked(msg.sender, _value);
+        return true;
+    }
+
+    function unstake(uint256 _value) public returns (bool success) {
+        require(stakedBalance[msg.sender] >= _value, "Insufficient staked balance");
+        stakedBalance[msg.sender] -= _value;
+        balanceOf[msg.sender] += _value;
+        stakingPool -= _value;
+        emit Unstaked(msg.sender, _value);
+        return true;
+    }
+
+    function convertAllToFiat() internal {
+        // Convert all EvoCoins to fiat currency before evaporation
+        for (address account = address(0); account < address(uint160(-1)); account = address(uint160(account) + 1)) {
+            uint256 balance = balanceOf[account];
+            if (balance > 0) {
+                uint256 fiatAmount = convertToFiat(account, balance, "USD");
+                // Handle fiat transfer logic here (e.g., through an external API)
+            }
+        }
+    }
+
+    function evaporateAll() internal {
+        for (address account = address(0); account < address(uint160(-1)); account = address(uint160(account) + 1)) {
+            uint256 balance = balanceOf[account];
+            if (balance > 0) {
+                balanceOf[account] = 0;
+                emit Evaporated(account, balance);
+            }
+        }
+        totalSupply = 0;
+        emit TotalEvaporation();
+    }
+
+    function reset() internal {
+        totalSupply = 1000000 * (10 ** uint256(decimals));
+        balanceOf[msg.sender] = totalSupply;
+        exchangeCount = 0;
+    }
+
+    function convertToFiat(address _from, uint256 _value, string memory fiatCurrency) internal returns (uint256) {
+        // Placeholder for integration with an external service to convert EVO to fiat currency
+        // This function should interact with an external API to get the conversion rate
+        uint256 fiatAmount = _value * 1; // Assume 1 EVO = 1 fiat unit for simplicity
+        balanceOf[_from] -= _value;
+        totalSupply -= _value;
+        return fiatAmount;
+    }
+}
