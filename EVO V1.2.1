@@ -1,0 +1,88 @@
+# app.py
+
+from flask import Flask, request, jsonify
+from web3 import Web3
+from Crypto.Cipher import AES
+import base64
+import os
+
+app = Flask(__name__)
+
+# Configuration pour Ethereum et le contrat EvoCoin
+infura_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+web3 = Web3(Web3.HTTPProvider(infura_url))
+private_key = "YOUR_PRIVATE_KEY"
+account = web3.eth.account.privateKeyToAccount(private_key)
+contract_address = 'YOUR_CONTRACT_ADDRESS'
+contract_abi = [
+    # Copiez l'ABI du contrat ici
+]
+
+EvoCoin = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+# Clé de chiffrement
+encryption_key = os.urandom(16)
+
+def encrypt(data):
+    cipher = AES.new(encryption_key, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(data.encode('utf-8'))
+    return base64.b64encode(cipher.nonce + tag + ciphertext).decode('utf-8')
+
+def decrypt(data):
+    data = base64.b64decode(data)
+    nonce, tag, ciphertext = data[:16], data[16:32], data[32:]
+    cipher = AES.new(encryption_key, AES.MODE_EAX, nonce=nonce)
+    return cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
+
+@app.route('/exchange', methods=['POST'])
+def exchange():
+    data = request.json
+    not_address = data['not_address']
+    amount_not = float(data['amount_not'])
+    bank_account = data['bank_account']
+    
+    # Encrypt the amount
+    encrypted_amount = encrypt(str(amount_not))
+    
+    # Process the transfer
+    nonce = web3.eth.getTransactionCount(account.address)
+    txn = EvoCoin.functions.transfer(not_address, amount_not).buildTransaction({
+        'chainId': 1,
+        'gas': 2000000,
+        'gasPrice': web3.toWei('20', 'gwei'),
+        'nonce': nonce,
+    })
+    signed_txn = web3.eth.account.signTransaction(txn, private_key=private_key)
+    tx_hash = web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+    
+    return jsonify({'message': 'Exchange initiated', 'transaction_hash': tx_hash.hex(), 'encrypted_amount': encrypted_amount})
+
+@app.route('/convert', methods=['POST'])
+def convert():
+    data = request.json
+    not_address = data['not_address']
+    
+    # Convert all EvoCoins to fiat currency before evaporation
+    balance = EvoCoin.functions.balanceOf(not_address).call()
+    fiat_amount = convertToFiat(not_address, balance, "USD")
+    
+    return jsonify({'message': 'Conversion successful', 'fiat_amount': fiat_amount})
+
+@app.route('/stake', methods=['POST'])
+def stake():
+    data = request.json
+    not_address = data['not_address']
+    amount_not = float(data['amount_not'])
+    
+    # Process the staking
+    nonce = web3.eth.getTransactionCount(account.address)
+    txn = EvoCoin.functions.stake(amount_not).buildTransaction({
+        'chainId': 1,
+        'gas': 2000000,
+        'gasPrice': web3.toWei('20', 'gwei'),
+        'nonce': nonce,
+    })
+    signed_txn = web3.eth.account.signTransaction(txn, private_key=private_key)
+    tx_hash = web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+    
+    return jsonify({'
