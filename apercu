@@ -1,0 +1,50 @@
+# chemin_du_fichier: clock_mining.py
+import json
+import random
+import time
+
+# Charger les paramètres du fichier JSON
+def load_parameters(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            parameters = json.load(f)
+        return parameters
+    except FileNotFoundError:
+        print(f"Erreur : Le fichier {file_path} est introuvable.")
+        return None
+    except json.JSONDecodeError:
+        print("Erreur : Format JSON invalide.")
+        return None
+
+# Simuler un algorithme de minage
+def mine(algorithm, power_factor):
+    # Simuler un calcul basé sur la puissance
+    time.sleep(0.5)  # Pause pour simuler un temps de calcul
+    base_reward = random.uniform(1, 10)  # Récompense aléatoire entre 1 et 10 dollars
+    return round(base_reward * power_factor, 2)
+
+# Minage principal
+def main_mining(parameters):
+    if not parameters:
+        return
+    
+    print("==== Démarrage du processus de minage ====")
+    algorithms = parameters.get("algorithms", [])
+    
+    total_earnings = 0
+    for algo in sorted(algorithms, key=lambda x: x['priority']):
+        name = algo.get('name')
+        power = algo.get('power', 1)
+        print(f"Exécution de l'algorithme : {name} (puissance : {power})")
+        reward = mine(name, power)
+        print(f"Récompense générée : ${reward}")
+        total_earnings += reward
+    
+    print("==== Fin du minage ====")
+    print(f"Total des gains : ${round(total_earnings, 2)}")
+
+# Point d'entrée principal
+if __name__ == "__main__":
+    config_file = "datasource/host.json"  # Fichier de configuration par défaut
+    parameters = load_parameters(config_file)
+    main_mining(parameters)
