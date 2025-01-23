@@ -1,0 +1,18 @@
+from flask import Flask, request, jsonify
+import random
+
+app = Flask(__name__)
+
+@app.route("/", methods=["POST"])
+def generate_music():
+    data = request.json
+    concept = data.get("details", {}).get("concept", "unknown")
+    # Simuler une génération
+    music_data = {
+        "file": f"{concept}_music.wav",
+        "length": random.randint(30, 120)
+    }
+    return jsonify({"music": music_data})
+
+if __name__ == "__main__":
+    app.run(port=5002)
