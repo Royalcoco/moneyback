@@ -1,0 +1,13 @@
+import requests
+
+# Étape 1 : Analyse d'une image
+image_data = {"task": "image_analyzer", "details": {"image": "image_path.jpg"}}
+response = requests.post("http://localhost:5000/collaborate", json=image_data)
+analysis = response.json()
+
+# Étape 2 : Génération musicale basée sur l'analyse
+music_data = {"task": "music_generator", "details": {"concept": analysis["analysis"]["colors"][0]}}
+response = requests.post("http://localhost:5000/collaborate", json=music_data)
+music_result = response.json()
+
+print("Music file generated:", music_result["music"]["file"])
